@@ -637,6 +637,12 @@ export default function App() {
     [handleGeneratedImageDataUrl, handleGeneratedImageUrl, setCurrentTitle]
   );
 
+  const handleClearGeneratedImages = useCallback(() => {
+    setGeneratedImages([]);
+    setSelectedGeneratedImageId(null);
+    setGeneratedImageError("");
+  }, []);
+
   const handleSuggestPrompt = useCallback(async () => {
     setCurrentTitle("");
     setGeneratingPrompt(true);
@@ -766,6 +772,7 @@ export default function App() {
               generatingImages={generatingImages}
               generatedImages={generatedImages}
               onSelectGeneratedImage={handleGeneratedImageSelect}
+              onClearGeneratedImages={handleClearGeneratedImages}
               selectedGeneratedImageId={selectedGeneratedImageId}
               generatedImageError={generatedImageError}
               onSubmit={() => handleCreateVideo()}

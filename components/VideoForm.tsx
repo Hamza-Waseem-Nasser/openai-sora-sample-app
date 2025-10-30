@@ -6,7 +6,7 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import { ImageIcon, Loader2, Sparkles, Wand2, X } from "lucide-react";
+import { ImageIcon, Loader2, Sparkles, Wand2, X, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -127,6 +127,7 @@ export interface VideoFormProps {
   generatingImages: boolean;
   generatedImages: GeneratedImageSuggestion[];
   onSelectGeneratedImage: (image: GeneratedImageSuggestion) => AsyncMaybe;
+  onClearGeneratedImages: () => void;
   selectedGeneratedImageId: string | null;
   generatedImageError: string;
   onSubmit: () => AsyncMaybe;
@@ -163,6 +164,7 @@ const VideoForm = ({
   generatingImages,
   generatedImages = [],
   onSelectGeneratedImage,
+  onClearGeneratedImages,
   selectedGeneratedImageId,
   generatedImageError,
   onSubmit,
@@ -206,6 +208,7 @@ const VideoForm = ({
     deriveSizeKey(size, sizeOptionGroups)
   );
   const [selectedPresetKey, setSelectedPresetKey] = useState<string | undefined>(undefined);
+  const [previewImage, setPreviewImage] = useState<GeneratedImageSuggestion | null>(null);
 
   useEffect(() => {
     setSizeSelectionKey((previous) => {
@@ -247,6 +250,16 @@ const VideoForm = ({
     onModelChange(template.suggestedModel);
     onSizeChange(template.suggestedSize);
     onSecondsChange(template.suggestedSeconds);
+  };
+
+  const handleDownloadImage = (image: GeneratedImageSuggestion, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selecting the image when clicking download
+    const link = document.createElement('a');
+    link.href = image.url;
+    link.download = `generated-image-${image.id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const promptHasImage = Boolean(imagePreviewUrl);
@@ -507,7 +520,7 @@ const VideoForm = ({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="rounded-md border border-border bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-none">
-                    {promptTooltip}
+                    Generate reference images using DALL-E to use as input for your video
                   </TooltipContent>
                 </Tooltip>
 
@@ -582,40 +595,71 @@ const VideoForm = ({
 
           {generatedImages.length > 0 ? (
             <section className="rounded-xl border border-border/60 bg-card/80 p-4 shadow-none">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Generated suggestions
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Generated suggestions
+                  </p>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    {generatedImages.length}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClearGeneratedImages}
+                  className="h-6 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Clear all
+                </Button>
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {generatedImages.map((image) => {
                   const isSelected = selectedGeneratedImageId === image.id;
                   return (
-                    <Button
-                      key={image.id}
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        void onSelectGeneratedImage(image);
-                      }}
-                      className={cn(
-                        "group relative flex h-auto w-full overflow-hidden rounded-lg border bg-card p-0",
-                        isSelected
-                          ? "border-indigo-500 ring-2 ring-indigo-200"
-                          : "border-border hover:border-border/70"
-                      )}
-                    >
-                      <div className="relative h-24 w-full">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={image.url}
-                          alt={image.description || "Generated option"}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      {isSelected ? (
-                        <span className="absolute inset-0 bg-indigo-500/10" />
-                      ) : null}
-                    </Button>
+                    <div key={image.id} className="relative group">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPreviewImage(image)}
+                        className={cn(
+                          "relative flex h-auto w-full overflow-hidden rounded-lg border bg-card p-0 cursor-pointer",
+                          isSelected
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        <div className="relative h-24 w-full">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.url}
+                            alt={image.description || "Generated option"}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        {isSelected ? (
+                          <span className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                            <span className="rounded-full bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">
+                              Selected
+                            </span>
+                          </span>
+                        ) : null}
+                      </Button>
+                      {/* Download button */}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        onClick={(e) => handleDownloadImage(image, e)}
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                        title="Download image"
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                    </div>
                   );
                 })}
               </div>
@@ -637,6 +681,80 @@ const VideoForm = ({
           ) : null}
         </div>
       </CardContent>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] flex flex-col bg-background rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Image Preview</h3>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setPreviewImage(null)}
+                className="h-8 w-8 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Image */}
+            <div className="flex-1 overflow-auto p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewImage.url}
+                alt={previewImage.description || "Preview"}
+                className="w-full h-auto rounded-lg"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between border-t border-border px-4 py-3 gap-3">
+              <p className="text-xs text-muted-foreground">
+                {previewImage.description || "Generated image"}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    handleDownloadImage(previewImage, e);
+                  }}
+                  className="gap-2"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    void onSelectGeneratedImage(previewImage);
+                    setPreviewImage(null);
+                  }}
+                  className="gap-2"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Use for Video
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
