@@ -561,8 +561,6 @@ const VideoForm = ({
           </div>
         </section>
 
-        <TemplatesSection onSelectTemplate={handleSelectTemplate} />
-
         <div className="space-y-4">
           {generatingTitle ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -623,7 +621,11 @@ const VideoForm = ({
               </div>
             </section>
           ) : null}
+        </div>
 
+        <TemplatesSection onSelectTemplate={handleSelectTemplate} />
+
+        <div className="space-y-4">
           {batchProgress && batchProgress.total > 1 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

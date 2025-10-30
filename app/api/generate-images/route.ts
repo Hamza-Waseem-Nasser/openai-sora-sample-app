@@ -3,8 +3,8 @@ import OpenAI from "openai";
 import { describeError, resolveErrorStatus } from "@/lib/sora";
 import type { GeneratedImageSuggestion } from "@/types/generated";
 
-const IMAGE_MODEL_FALLBACK = "gpt-image-1";
-const ALLOWED_IMAGE_MODELS = new Set<string>(["gpt-image-1"]);
+const IMAGE_MODEL_FALLBACK = "dall-e-2";
+const ALLOWED_IMAGE_MODELS = new Set<string>(["dall-e-2", "dall-e-3"]);
 const MAX_IMAGE_COUNT = 4;
 const DEFAULT_IMAGE_COUNT = 3;
 
@@ -100,14 +100,34 @@ export async function POST(request: Request) {
   const count = coerceImageCount(rawPayload.count);
   const model = coerceImageModel(rawPayload.model);
 
+  // DALL-E 3 only supports n=1, DALL-E 2 can do multiple
+  const finalCount = model === "dall-e-3" ? 1 : count;
+  
+  // DALL-E 2 only supports specific sizes
+  let finalSize: ImageSize = size;
+  if (model === "dall-e-2") {
+    // DALL-E 2 only supports 256x256, 512x512, 1024x1024
+    const dalle2Sizes = ["256x256", "512x512", "1024x1024"];
+    if (!dalle2Sizes.includes(finalSize as string)) {
+      finalSize = "1024x1024";
+    }
+  }
+
   try {
-    const generation = await client.images.generate({
+    const params: OpenAI.Images.ImageGenerateParams = {
       model,
       prompt,
-      size,
-      quality: "high",
-      n: count,
-    });
+      size: finalSize,
+      n: finalCount,
+      response_format: "b64_json", // Request base64 to avoid CORS issues
+    };
+    
+    // DALL-E 3 supports quality parameter
+    if (model === "dall-e-3") {
+      params.quality = "hd";
+    }
+    
+    const generation = await client.images.generate(params);
 
     const suggestions = (generation.data ?? []).reduce<
       GeneratedImageSuggestion[]

@@ -26,55 +26,53 @@ export default function TemplatesSection({ onSelectTemplate }: TemplatesSectionP
     ? searchTemplates(searchQuery)
     : getTemplatesByCategory(selectedCategory);
 
-  const visibleTemplates = isExpanded ? displayTemplates : displayTemplates.slice(0, 3);
+  const visibleTemplates = isExpanded ? displayTemplates : displayTemplates.slice(0, 2);
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="border-b border-border/60 px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold">Marketing Templates</h3>
-              <p className="text-xs text-muted-foreground">
-                Pre-built prompts for common use cases
-              </p>
-            </div>
+    <div className="rounded-xl border border-border/60 bg-card/30 shadow-sm">
+      <div className="border-b border-border/40 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600">
+            <Sparkles className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold">Marketing Templates</h3>
+            <p className="text-[10px] text-muted-foreground">
+              Pre-built prompts for common use cases
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9"
+            className="h-8 pl-8 pr-8 text-xs"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
         {/* Categories */}
         {!searchQuery && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {MARKETING_CATEGORIES.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors ${
                   selectedCategory === category
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -87,9 +85,9 @@ export default function TemplatesSection({ onSelectTemplate }: TemplatesSectionP
         )}
 
         {/* Templates Grid */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {visibleTemplates.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="py-6 text-center text-xs text-muted-foreground">
               No templates found matching "{searchQuery}"
             </div>
           ) : (
@@ -97,37 +95,27 @@ export default function TemplatesSection({ onSelectTemplate }: TemplatesSectionP
               <button
                 key={template.id}
                 onClick={() => onSelectTemplate(template)}
-                className="w-full rounded-lg border border-border bg-background p-3 text-left transition-all hover:border-primary/50 hover:bg-accent hover:shadow-sm"
+                className="w-full rounded-lg border border-border/60 bg-background/50 p-2.5 text-left transition-all hover:border-primary/50 hover:bg-accent/50 hover:shadow-sm"
               >
                 <div className="mb-1 flex items-start justify-between gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">
+                  <h4 className="text-xs font-semibold text-foreground leading-tight">
                     {template.title}
                   </h4>
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                     {template.category}
                   </span>
                 </div>
-                <p className="mb-2 text-xs text-muted-foreground">
+                <p className="mb-1.5 text-[10px] text-muted-foreground line-clamp-1">
                   {template.description}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {template.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span className="rounded bg-muted px-1.5 py-0.5">
+                <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+                  <span className="rounded bg-muted px-1 py-0.5">
                     {template.suggestedModel}
                   </span>
-                  <span className="rounded bg-muted px-1.5 py-0.5">
+                  <span className="rounded bg-muted px-1 py-0.5">
                     {template.suggestedSize}
                   </span>
-                  <span className="rounded bg-muted px-1.5 py-0.5">
+                  <span className="rounded bg-muted px-1 py-0.5">
                     {template.suggestedSeconds}s
                   </span>
                 </div>
@@ -137,22 +125,18 @@ export default function TemplatesSection({ onSelectTemplate }: TemplatesSectionP
         </div>
 
         {/* Show More/Less */}
-        {displayTemplates.length > 3 && (
+        {displayTemplates.length > 2 && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full"
+            className="w-full h-7 text-xs"
           >
             {isExpanded
               ? "Show Less"
-              : `Show ${displayTemplates.length - 3} More Templates`}
+              : `Show ${displayTemplates.length - 2} More`}
           </Button>
         )}
-
-        <p className="text-center text-xs text-muted-foreground">
-          {MARKETING_TEMPLATES.length} templates available
-        </p>
       </div>
     </div>
   );
