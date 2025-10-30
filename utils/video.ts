@@ -6,25 +6,44 @@ export type SoraModel = (typeof MODEL_OPTIONS)[number];
 export type SizeOptionGroups = {
   portrait: readonly string[];
   landscape: readonly string[];
+  square: readonly string[];
 };
+
+// Social Media Presets
+export const SOCIAL_MEDIA_PRESETS = {
+  "Instagram Reels": { size: "720x1280", label: "Instagram Reels (9:16)" },
+  "TikTok": { size: "720x1280", label: "TikTok (9:16)" },
+  "YouTube Shorts": { size: "720x1280", label: "YouTube Shorts (9:16)" },
+  "Instagram Square": { size: "1080x1080", label: "Instagram Square (1:1)" },
+  "LinkedIn": { size: "1280x720", label: "LinkedIn (16:9)" },
+  "Twitter/X": { size: "1280x720", label: "Twitter/X (16:9)" },
+  "Facebook": { size: "1280x720", label: "Facebook (16:9)" },
+} as const;
 
 export const MODEL_SIZE_OPTIONS: Record<SoraModel, SizeOptionGroups> = {
   "sora-2": {
-    portrait: ["720x1280"],
-    landscape: [DEFAULT_SIZE],
+    portrait: ["720x1280", "1080x1920"],
+    landscape: [DEFAULT_SIZE, "1920x1080"],
+    square: ["1080x1080"],
   },
   "sora-2-pro": {
-    portrait: ["720x1280", "1024x1792"],
-    landscape: [DEFAULT_SIZE, "1792x1024"],
+    portrait: ["720x1280", "1024x1792", "1080x1920"],
+    landscape: [DEFAULT_SIZE, "1792x1024", "1920x1080"],
+    square: ["1080x1080"],
   },
 };
 
-export const SECONDS_OPTIONS = ["4", "8", "12"] as const;
-export type SoraSeconds = (typeof SECONDS_OPTIONS)[number];
+// Updated to support custom duration (1-12 seconds)
+export const MIN_SECONDS = 1;
+export const MAX_SECONDS = 12;
+export const SECONDS_OPTIONS = ["4", "8", "12"] as const; // Keep for backwards compatibility
+export type SoraSeconds = string; // Changed to string to support custom values
 
-export const sanitizeSeconds = (value: string | number | null | undefined): SoraSeconds => {
-  const str = typeof value === "number" ? String(value) : (value ?? "").trim();
-  return SECONDS_OPTIONS.includes(str as SoraSeconds) ? (str as SoraSeconds) : SECONDS_OPTIONS[0];
+export const sanitizeSeconds = (value: string | number | null | undefined): string => {
+  const num = typeof value === "number" ? value : parseFloat(String(value ?? "4"));
+  if (isNaN(num)) return "4";
+  const clamped = Math.max(MIN_SECONDS, Math.min(MAX_SECONDS, Math.round(num)));
+  return String(clamped);
 };
 
 export const IMAGE_INPUT_ALERT = "This video used an image input. Please select the correct image manually before generating.";
@@ -48,6 +67,7 @@ export interface VideoItem extends Record<string, unknown> {
   downloaded: boolean;
   image_input_required: boolean;
   error: unknown;
+  userId?: string | null; // Worker ID who created this video
 }
 
 const coerceProgressPercent = (value: unknown): number | null => {

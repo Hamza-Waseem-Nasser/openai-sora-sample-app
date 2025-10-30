@@ -30,20 +30,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Card, CardContent } from "../ui";
+import TemplatesSection from "@/components/TemplatesSection";
+import SocialMediaPresets from "@/components/SocialMediaPresets";
 import {
-  SECONDS_OPTIONS,
+  MIN_SECONDS,
+  MAX_SECONDS,
   type SizeOptionGroups,
   type SoraModel,
   type SoraSeconds,
 } from "../utils/video";
 import type { ImagePreviewMeta } from "../hooks/useVideoForm";
 import type { GeneratedImageSuggestion } from "@/types/generated";
+import type { MarketingTemplate } from "@/utils/marketingTemplates";
 
 type AsyncMaybe = void | Promise<unknown>;
 
 const VERSION_OPTIONS = [1, 2, 3, 4];
 
-type OrientationId = "portrait" | "landscape";
+type OrientationId = "portrait" | "landscape" | "square";
 
 const formatSizeKey = (orientation: OrientationId, sizeValue: string) =>
   `${orientation}|${sizeValue}`;
@@ -52,8 +56,9 @@ const parseSizeKey = (
   key: string
 ): { orientation: OrientationId; size: string } => {
   const [rawOrientation, rawSize] = key.split("|", 2);
-  const orientation: OrientationId =
-    rawOrientation === "portrait" ? "portrait" : "landscape";
+  let orientation: OrientationId = "landscape";
+  if (rawOrientation === "portrait") orientation = "portrait";
+  else if (rawOrientation === "square") orientation = "square";
   return { orientation, size: rawSize ?? key };
 };
 
@@ -76,6 +81,7 @@ const deriveSizeKey = (
 
   return (
     matches("portrait") ||
+    matches("square") ||
     matches("landscape") ||
     formatSizeKey("landscape", sizeValue)
   );
@@ -199,6 +205,7 @@ const VideoForm = ({
   const [sizeSelectionKey, setSizeSelectionKey] = useState(() =>
     deriveSizeKey(size, sizeOptionGroups)
   );
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setSizeSelectionKey((previous) => {
@@ -227,11 +234,19 @@ const VideoForm = ({
     const { orientation, size: nextSize } = parseSizeKey(value);
     setSizeSelectionKey(formatSizeKey(orientation, nextSize));
     onSizeChange(nextSize);
+    setSelectedPresetKey(undefined); // Clear preset selection when manually changing size
   };
 
   const triggerFileDialog = () => {
     if (remixDisabled) return;
     fileInputRef.current?.click();
+  };
+
+  const handleSelectTemplate = (template: MarketingTemplate) => {
+    onPromptChange(template.prompt);
+    onModelChange(template.suggestedModel);
+    onSizeChange(template.suggestedSize);
+    onSecondsChange(template.suggestedSeconds);
   };
 
   const promptHasImage = Boolean(imagePreviewUrl);
@@ -336,7 +351,7 @@ const VideoForm = ({
                     <div className="flex min-w-max items-center gap-2">
                       <Select
                         value={model}
-                        onValueChange={(value) =>
+                        onValueChange={(value: string) =>
                           onModelChange(value as SoraModel)
                         }
                         disabled={remixDisabled}
@@ -397,34 +412,29 @@ const VideoForm = ({
                         </SelectContent>
                       </Select>
 
-                      <Select
-                        value={seconds}
-                        onValueChange={(value) =>
-                          onSecondsChange(value as SoraSeconds)
-                        }
-                        disabled={remixDisabled}
-                      >
-                        <SelectTrigger className={CONTROL_TRIGGER_CLASS}>
-                          <div className={CONTROL_TRIGGER_CONTENT_CLASS}>
-                            <span className={CONTROL_TRIGGER_LABEL_CLASS}>
-                              Seconds
-                            </span>
-                            <div className={CONTROL_TRIGGER_VALUE_CLASS}>
-                              <SelectValue placeholder="Seconds" />
-                            </div>
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent className={CONTROL_CONTENT_CLASS}>
-                          <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                            Duration
-                          </div>
-                          {SECONDS_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className={CONTROL_TRIGGER_CLASS}>
+                        <div className={CONTROL_TRIGGER_CONTENT_CLASS}>
+                          <span className={CONTROL_TRIGGER_LABEL_CLASS}>
+                            Seconds
+                          </span>
+                          <Input
+                            type="number"
+                            min={MIN_SECONDS}
+                            max={MAX_SECONDS}
+                            value={seconds}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              const numValue = parseInt(value, 10);
+                              if (value === '' || (numValue >= MIN_SECONDS && numValue <= MAX_SECONDS)) {
+                                onSecondsChange(value as SoraSeconds);
+                              }
+                            }}
+                            disabled={remixDisabled}
+                            className="h-7 w-16 rounded border border-border/60 bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
+                            placeholder="1-12"
+                          />
+                        </div>
+                      </div>
 
                       <Select
                         value={versionValue}
@@ -458,6 +468,18 @@ const VideoForm = ({
                   </div>
                 </InputGroupAddon>
               </InputGroup>
+            </div>
+
+            {/* Social Media Presets */}
+            <div className="px-4 pb-4">
+              <SocialMediaPresets
+                currentSize={size}
+                selectedPresetKey={selectedPresetKey}
+                onSelectPreset={(size, label, presetKey) => {
+                  onSizeChange(size);
+                  setSelectedPresetKey(presetKey);
+                }}
+              />
             </div>
 
             <TooltipProvider delayDuration={150}>
@@ -538,6 +560,8 @@ const VideoForm = ({
             </TooltipProvider>
           </div>
         </section>
+
+        <TemplatesSection onSelectTemplate={handleSelectTemplate} />
 
         <div className="space-y-4">
           {generatingTitle ? (

@@ -12,6 +12,7 @@ import VideoSidebar, {
   type SidebarPreviewState,
 } from "@/components/VideoSidebar";
 import VideoPreviewOverlay from "@/components/VideoPreviewOverlay";
+import UserManager from "@/components/UserManager";
 import usePersistedState from "@/hooks/usePersistedState";
 import usePreview from "@/hooks/usePreview";
 import useThumbnails from "@/hooks/useThumbnails";
@@ -71,6 +72,7 @@ const usePreviewState = () => {
 
 export default function App() {
   const [items, setItems] = usePersistedState<VideoItem[]>("sora.items", []);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [batchProgress, setBatchProgress] = useState<BatchProgressState | null>(
     null
@@ -91,6 +93,12 @@ export default function App() {
   const [refreshingVideos, setRefreshingVideos] = useState<
     Record<string, boolean>
   >({});
+
+  // Filter items by current user
+  const userItems = useMemo(() => {
+    if (!currentUserId) return items;
+    return items.filter(item => item.userId === currentUserId);
+  }, [items, currentUserId]);
 
   const closeMobileSidebar = useCallback(() => {
     setMobileSidebarOpen(false);
@@ -321,6 +329,7 @@ export default function App() {
               Date.now() / 1000,
             retry_of: replaceId || null,
             title: videoTitle,
+            userId: currentUserId,
           };
 
           const normalized = normalizeVideo(rawItem);
@@ -370,6 +379,7 @@ export default function App() {
       setRemixId,
       size,
       versionsCount,
+      currentUserId,
     ]
   );
 
@@ -682,7 +692,7 @@ export default function App() {
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         <VideoSidebar
-          items={items}
+          items={userItems}
           thumbnails={thumbnails}
           onDownloadAll={handleDownloadAll}
           downloadingAll={downloadingAll}
@@ -697,26 +707,40 @@ export default function App() {
           isMobileOpen={isMobileSidebarOpen}
           onMobileClose={closeMobileSidebar}
         />
-        <main className="order-2 h-screen flex-1 overflow-y-auto px-4 py-5 bg-neutral-100 dark:bg-neutral-800 lg:px-10 lg:py-8">
+        <main className="order-2 h-screen flex-1 overflow-y-auto px-4 py-5 bg-gradient-to-br from-background via-background to-purple-50/30 dark:to-purple-950/20 lg:px-10 lg:py-8">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
             <header className="mb-1.5 flex items-start justify-between gap-3">
               <div>
-                <h1 className="mb-2 text-3xl font-semibold">Sora API Demo</h1>
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-lg shadow-primary/30">
+                      <span className="text-xl font-bold text-white">A</span>
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        Aries AI
+                      </h1>
+                      <p className="text-xs text-muted-foreground -mt-0.5">Video Studio</p>
+                    </div>
+                  </div>
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  Try Sora models in the API, with different parameters and text
-                  + image inputs.
+                  Create professional marketing videos with AI-powered generation using Sora models.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={openMobileSidebar}
-                className="mt-1 h-10 w-10 rounded-full border-border text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
-                aria-label="Open generations sidebar"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+              <div className="flex items-start gap-2">
+                <UserManager onUserChange={setCurrentUserId} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={openMobileSidebar}
+                  className="mt-1 h-10 w-10 rounded-full border-border text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
+                  aria-label="Open generations sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
             </header>
             <VideoForm
               prompt={prompt}
