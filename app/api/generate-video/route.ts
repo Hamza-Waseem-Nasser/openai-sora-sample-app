@@ -44,6 +44,14 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  
+  // Sora API enforces a 500 character limit on prompts
+  if (prompt.length > 500) {
+    return Response.json(
+      { error: { message: `Prompt exceeds maximum length of 500 characters (current: ${prompt.length})` } },
+      { status: 400 }
+    );
+  }
 
   const model = coerceVideoModel(
     typeof payload.model === "string" ? payload.model : null
@@ -52,7 +60,8 @@ export async function POST(request: Request) {
     typeof payload.size === "string" ? payload.size : null
   );
   const seconds = coerceVideoSeconds(
-    payload.seconds != null ? String(payload.seconds) : null
+    payload.seconds != null ? String(payload.seconds) : null,
+    model
   );
 
   const imageData = isRecord(payload.image) ? payload.image : null;
@@ -114,15 +123,37 @@ export async function POST(request: Request) {
         size,
         seconds,
       };
+      
+      console.log("🚀 SENDING TO OPENAI API:", {
+        endpoint,
+        payload,
+        note: "This is EXACTLY what we're sending - no modifications"
+      });
+      
       response = await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
       });
+      
+      console.log("📥 RECEIVED FROM OPENAI:", {
+        status: response.status,
+        statusText: response.statusText,
+        note: "This response is from OpenAI's servers, not our code"
+      });
     }
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result) {
+      // Log detailed error information
+      console.error("OpenAI API Error:", {
+        status: response.status,
+        statusText: response.statusText,
+        result,
+        endpoint,
+        videoPayload,
+      });
+      
       const message = describeError(result, "Failed to create video");
       const derivedStatus = result ? resolveErrorStatus(result) : undefined;
       const status =
@@ -135,7 +166,11 @@ export async function POST(request: Request) {
     const normalized = normalizeVideoResponse(result, videoPayload);
     return Response.json(normalized);
   } catch (error) {
-    console.error("generate-video error", error);
+    console.error("generate-video error (full details):", {
+      error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     const message = describeError(error, "Failed to create video");
     const status = resolveErrorStatus(error);
     return Response.json({ error: { message } }, { status });

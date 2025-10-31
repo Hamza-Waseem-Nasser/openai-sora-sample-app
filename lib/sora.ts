@@ -42,7 +42,7 @@ export const coerceVideoModel = (value: string | null | undefined): VideoModel =
 export const coerceVideoSize = (value: string | null | undefined): VideoSize =>
   coerceUnionValue(value, ALLOWED_SIZES, SIZE_FALLBACK);
 
-export const coerceVideoSeconds = (value: string | null | undefined): VideoSeconds =>
+export const coerceVideoSeconds = (value: string | null | undefined, model?: VideoModel): VideoSeconds =>
   coerceUnionValue(value, ALLOWED_SECONDS, SECONDS_FALLBACK);
 
 const toUnixSeconds = (value: unknown): number | null => {

@@ -33,8 +33,7 @@ import { Card, CardContent } from "../ui";
 import TemplatesSection from "@/components/TemplatesSection";
 import SocialMediaPresets from "@/components/SocialMediaPresets";
 import {
-  MIN_SECONDS,
-  MAX_SECONDS,
+  SECONDS_OPTIONS,
   type SizeOptionGroups,
   type SoraModel,
   type SoraSeconds,
@@ -425,29 +424,32 @@ const VideoForm = ({
                         </SelectContent>
                       </Select>
 
-                      <div className={CONTROL_TRIGGER_CLASS}>
-                        <div className={CONTROL_TRIGGER_CONTENT_CLASS}>
-                          <span className={CONTROL_TRIGGER_LABEL_CLASS}>
-                            Seconds
-                          </span>
-                          <Input
-                            type="number"
-                            min={MIN_SECONDS}
-                            max={MAX_SECONDS}
-                            value={seconds}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              const numValue = parseInt(value, 10);
-                              if (value === '' || (numValue >= MIN_SECONDS && numValue <= MAX_SECONDS)) {
-                                onSecondsChange(value as SoraSeconds);
-                              }
-                            }}
-                            disabled={remixDisabled}
-                            className="h-7 w-16 rounded border border-border/60 bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
-                            placeholder="1-12"
-                          />
-                        </div>
-                      </div>
+                      <Select
+                        value={seconds}
+                        onValueChange={(value) => onSecondsChange(value as SoraSeconds)}
+                        disabled={remixDisabled}
+                      >
+                        <SelectTrigger className={CONTROL_TRIGGER_CLASS}>
+                          <div className={CONTROL_TRIGGER_CONTENT_CLASS}>
+                            <span className={CONTROL_TRIGGER_LABEL_CLASS}>
+                              Seconds
+                            </span>
+                            <div className={CONTROL_TRIGGER_VALUE_CLASS}>
+                              <SelectValue placeholder="Duration" />
+                            </div>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className={CONTROL_CONTENT_CLASS}>
+                          <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Duration
+                          </div>
+                          {SECONDS_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}s
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
                       <Select
                         value={versionValue}

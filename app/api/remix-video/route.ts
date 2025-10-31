@@ -37,12 +37,21 @@ export async function POST(request: Request) {
   if (!prompt) {
     return Response.json({ error: { message: "Prompt is required" } }, { status: 400 });
   }
+  
+  // Sora API enforces a 500 character limit on prompts
+  if (prompt.length > 500) {
+    return Response.json(
+      { error: { message: `Prompt exceeds maximum length of 500 characters (current: ${prompt.length})` } },
+      { status: 400 }
+    );
+  }
 
+  const model = coerceVideoModel(typeof payload.model === "string" ? payload.model : null);
   const fallback: VideoRequestPayload = {
     prompt,
-    model: coerceVideoModel(typeof payload.model === "string" ? payload.model : null),
+    model,
     size: coerceVideoSize(typeof payload.size === "string" ? payload.size : null),
-    seconds: coerceVideoSeconds(payload.seconds != null ? String(payload.seconds) : null),
+    seconds: coerceVideoSeconds(payload.seconds != null ? String(payload.seconds) : null, model),
   };
 
   try {

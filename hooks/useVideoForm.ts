@@ -80,6 +80,14 @@ const useVideoForm = (): UseVideoFormResult => {
       setSize(resolvedSize);
     }
   }, [size, resolvedSize, setSize]);
+  
+  // Auto-adjust seconds when model changes
+  useEffect(() => {
+    const validatedSeconds = sanitizeSeconds(seconds, resolvedModel) as SoraSeconds;
+    if (seconds !== validatedSeconds) {
+      setSeconds(validatedSeconds);
+    }
+  }, [resolvedModel, seconds, setSeconds]);
 
   const sizeOptionGroups = useMemo<SizeOptionGroups>(
     () => getModelSizeOptions(resolvedModel),
@@ -182,7 +190,7 @@ const useVideoForm = (): UseVideoFormResult => {
     const sanitizedModel = sanitizeModel((item.model as string | undefined) ?? MODEL_OPTIONS[0]);
     setModel(sanitizedModel);
     setSize(sanitizeSizeForModel((item.size as string | undefined) ?? DEFAULT_SIZE, sanitizedModel));
-    setSeconds(sanitizeSeconds((item.seconds as string | number | null | undefined) ?? SECONDS_OPTIONS[0]));
+    setSeconds(sanitizeSeconds((item.seconds as string | number | null | undefined) ?? SECONDS_OPTIONS[0], sanitizedModel) as SoraSeconds);
     resetImage();
   }, [prompt, resetImage, setModel, setSeconds, setSize]);
 
