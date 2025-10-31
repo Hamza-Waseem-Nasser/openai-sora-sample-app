@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   MARKETING_CATEGORIES,
-  MARKETING_TEMPLATES,
   getTemplatesByCategory,
   searchTemplates,
   type MarketingTemplate,
@@ -88,7 +87,7 @@ export default function TemplatesSection({ onSelectTemplate }: TemplatesSectionP
         <div className="space-y-1.5">
           {visibleTemplates.length === 0 ? (
             <div className="py-6 text-center text-xs text-muted-foreground">
-              No templates found matching "{searchQuery}"
+              No templates found matching &ldquo;{searchQuery}&rdquo;
             </div>
           ) : (
             visibleTemplates.map((template) => (

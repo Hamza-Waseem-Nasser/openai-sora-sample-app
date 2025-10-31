@@ -10,7 +10,7 @@ interface SocialMediaPresetsProps {
   selectedPresetKey?: string;
 }
 
-export default function SocialMediaPresets({ onSelectPreset, currentSize, selectedPresetKey }: SocialMediaPresetsProps) {
+export default function SocialMediaPresets({ onSelectPreset, selectedPresetKey }: SocialMediaPresetsProps) {
   const presets = Object.entries(SOCIAL_MEDIA_PRESETS);
 
   return (
