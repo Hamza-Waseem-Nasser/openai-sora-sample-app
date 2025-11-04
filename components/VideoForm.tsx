@@ -48,6 +48,12 @@ const VERSION_OPTIONS = [1, 2, 3, 4];
 
 type OrientationId = "portrait" | "landscape" | "square";
 
+export interface ImageFileWithPreview {
+  file: File;
+  previewUrl: string;
+  id: string;
+}
+
 const formatSizeKey = (orientation: OrientationId, sizeValue: string) =>
   `${orientation}|${sizeValue}`;
 
@@ -120,6 +126,8 @@ export interface VideoFormProps {
   remixId: string;
   onRemixIdChange: (value: string) => void;
   onImageSelect: (event: ChangeEvent<HTMLInputElement>) => AsyncMaybe;
+  imageFiles?: ImageFileWithPreview[];
+  onRemoveImage?: (id: string) => void;
   imagePreviewUrl: string | null;
   imagePreviewMeta: ImagePreviewMeta | null;
   onGenerateImages: () => AsyncMaybe;
@@ -157,6 +165,8 @@ const VideoForm = ({
   remixId,
   onRemixIdChange,
   onImageSelect,
+  imageFiles = [],
+  onRemoveImage,
   imagePreviewUrl,
   imagePreviewMeta,
   onGenerateImages,
@@ -261,8 +271,6 @@ const VideoForm = ({
     document.body.removeChild(link);
   };
 
-  const promptHasImage = Boolean(imagePreviewUrl);
-
   return (
     <Card className="flex h-full flex-col overflow-hidden border-none  shadow-none">
       <CardContent className="flex flex-1 min-h-0 flex-col overflow-y-auto space-y-6 px-0">
@@ -292,18 +300,41 @@ const VideoForm = ({
                 )}
               >
                 <div className="relative w-full">
-                  {promptHasImage ? (
-                    <div className="absolute left-5 top-5 flex gap-3">
-                      <div className="h-16 w-16 overflow-hidden rounded-lg border border-border/50 bg-card/40">
-                        {imagePreviewUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={imagePreviewUrl}
-                            alt="Prompt reference"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                      </div>
+                  {imageFiles.length > 0 ? (
+                    <div className="absolute left-5 top-5 flex flex-wrap gap-2 max-w-[calc(100%-6rem)]">
+                      {imageFiles.map(({ id, previewUrl }) => (
+                        <div key={id} className="relative group">
+                          <div className="h-14 w-14 overflow-hidden rounded-lg border border-border/50 bg-card/40">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={previewUrl}
+                              alt="Reference"
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          {onRemoveImage && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveImage(id)}
+                              className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-sm"
+                              aria-label="Remove image"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {imageFiles.length < 9 && (
+                        <button
+                          type="button"
+                          onClick={triggerFileDialog}
+                          disabled={remixDisabled}
+                          className="h-14 w-14 overflow-hidden rounded-lg border border-dashed border-border/50 bg-muted/40 hover:bg-muted/60 flex items-center justify-center transition-colors disabled:opacity-50"
+                          aria-label="Add more images"
+                        >
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                      )}
                     </div>
                   ) : null}
                   <InputGroupTextarea
@@ -312,7 +343,7 @@ const VideoForm = ({
                     placeholder="Describe the scene you want Sora to create..."
                     className={cn(
                       "min-h-[220px] w-full resize-none border-0 bg-transparent px-6 pb-16 pt-6 text-base leading-relaxed text-foreground",
-                      promptHasImage ? "pl-[7.5rem]" : ""
+                      imageFiles.length > 0 ? "pt-24" : ""
                     )}
                   />
                   <Button
@@ -326,9 +357,9 @@ const VideoForm = ({
                     <X className="h-4 w-4" />
                   </Button>
 
-                  {imagePreviewMeta ? (
+                  {imagePreviewMeta && imageFiles.length > 0 ? (
                     <p className="text-xs text-muted-foreground pb-2 pl-2">
-                      {imagePreviewMeta.name} • {imagePreviewMeta.width}x
+                      {imageFiles.length} image{imageFiles.length > 1 ? 's' : ''} • Composite: {imagePreviewMeta.width}x
                       {imagePreviewMeta.height}
                     </p>
                   ) : null}
@@ -342,6 +373,7 @@ const VideoForm = ({
                     ref={fileInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
+                    multiple
                     className="hidden"
                     disabled={remixDisabled}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -357,7 +389,7 @@ const VideoForm = ({
                       className="whitespace-nowrap bg-card rounded-full py-1 border border-dashed border-border/70 px-3 text-sm text-muted-foreground hover:border-border hover:bg-muted/60"
                     >
                       <ImageIcon className="h-4 w-4" />
-                      Add image
+                      {imageFiles.length > 0 ? 'Add more images' : 'Add images'}
                     </InputGroupButton>
 
                     <div className="flex min-w-max items-center gap-2">

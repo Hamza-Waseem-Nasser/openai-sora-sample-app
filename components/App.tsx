@@ -121,10 +121,12 @@ export default function App() {
     setVersionsCount,
     remixId,
     setRemixId,
-    imageFile,
+    imageFiles,
+    compositeImageFile,
     imagePreviewUrl,
     imagePreviewMeta,
     handleImageSelect,
+    handleRemoveImage,
     handleGeneratedImageDataUrl,
     handleGeneratedImageUrl,
     clearForm: resetFormFields,
@@ -260,7 +262,7 @@ export default function App() {
       const runs = replaceId ? 1 : Math.max(1, Number(versionsCount) || 1);
       const isRemix = Boolean(effectiveRemixId);
 
-      if (isRemix && imageFile) {
+      if (isRemix && compositeImageFile) {
         console.log(
           "Remix currently ignores uploaded image overrides. Remove the image to continue, or create a fresh video instead."
         );
@@ -303,7 +305,7 @@ export default function App() {
               model: effectiveModel,
               size: effectiveSize,
               seconds: effectiveSeconds,
-              imageFile,
+              imageFile: compositeImageFile,
             });
           }
 
@@ -320,7 +322,7 @@ export default function App() {
               payload.remix_of ||
               payload.source_video_id ||
               null,
-            image_input_required: Boolean(imageFile),
+            image_input_required: Boolean(compositeImageFile),
             error: payload.error ?? null,
             createdAt: new Date().toISOString(),
             created_at:
@@ -368,7 +370,7 @@ export default function App() {
       }
     },
     [
-      imageFile,
+      compositeImageFile,
       model,
       prompt,
       remixId,
@@ -766,6 +768,8 @@ export default function App() {
               remixId={remixId}
               onRemixIdChange={setRemixId}
               onImageSelect={handleLocalImageSelect}
+              imageFiles={imageFiles}
+              onRemoveImage={handleRemoveImage}
               imagePreviewUrl={imagePreviewUrl}
               imagePreviewMeta={imagePreviewMeta}
               onGenerateImages={handleGenerateInputImages}

@@ -22,12 +22,18 @@ import {
   type VideoItem,
   type SoraSeconds,
 } from "../utils/video";
-import { cropImageToCover, dataUrlToFile, fetchImageAsFile } from "../utils/image";
+import { cropImageToCover, dataUrlToFile, fetchImageAsFile, composeMultipleImages } from "../utils/image";
 
 export interface ImagePreviewMeta {
   name: string;
   width: number;
   height: number;
+}
+
+export interface ImageFileWithPreview {
+  file: File;
+  previewUrl: string;
+  id: string;
 }
 
 export interface UseVideoFormResult {
@@ -43,10 +49,12 @@ export interface UseVideoFormResult {
   setVersionsCount: Dispatch<SetStateAction<number>>;
   remixId: string;
   setRemixId: Dispatch<SetStateAction<string>>;
-  imageFile: File | null;
+  imageFiles: ImageFileWithPreview[];
+  compositeImageFile: File | null;
   imagePreviewUrl: string | null;
   imagePreviewMeta: ImagePreviewMeta | null;
   handleImageSelect: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleRemoveImage: (id: string) => void;
   applyImageFile: (file: File | null, currentSize?: string) => Promise<void>;
   handleGeneratedImageDataUrl: (dataUrl: string, filename?: string, currentSize?: string) => Promise<void>;
   handleGeneratedImageUrl: (url: string, filename?: string, currentSize?: string) => Promise<void>;
@@ -61,8 +69,8 @@ const useVideoForm = (): UseVideoFormResult => {
   const [size, setSize] = usePersistedState<string>("sora.size", DEFAULT_SIZE);
   const [seconds, setSeconds] = usePersistedState<SoraSeconds>("sora.seconds", "4");
   const [versionsCount, setVersionsCount] = usePersistedState<number>("sora.versions", 1);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [originalImageFile, setOriginalImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<ImageFileWithPreview[]>([]);
+  const [compositeImageFile, setCompositeImageFile] = useState<File | null>(null);
   const [remixId, setRemixId] = useState<string>("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imagePreviewMeta, setImagePreviewMeta] = useState<ImagePreviewMeta | null>(null);
@@ -93,7 +101,6 @@ const useVideoForm = (): UseVideoFormResult => {
     () => getModelSizeOptions(resolvedModel),
     [resolvedModel],
   );
-  const lastCroppedImageKeyRef = useRef<string | null>(null);
 
   const clearImagePreview = useCallback(() => {
     if (imagePreviewUrl) {
@@ -101,58 +108,109 @@ const useVideoForm = (): UseVideoFormResult => {
     }
     setImagePreviewUrl(null);
     setImagePreviewMeta(null);
-    lastCroppedImageKeyRef.current = null;
   }, [imagePreviewUrl]);
 
   useEffect(() => () => {
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
     }
-  }, [imagePreviewUrl]);
+    // Clean up all image preview URLs
+    imageFiles.forEach(({ previewUrl }) => {
+      URL.revokeObjectURL(previewUrl);
+    });
+  }, [imagePreviewUrl, imageFiles]);
 
-  const applyCroppedImage = useCallback(async (file: File, sizeStr: string) => {
-    const key = `${file.name || "file"}-${file.lastModified || ""}-${sizeStr}`;
-    if (lastCroppedImageKeyRef.current === key) return;
-    lastCroppedImageKeyRef.current = key;
-    const { width, height } = parseSize(sizeStr);
-    try {
-      const cropped = await cropImageToCover(file, width, height);
-      setImageFile(cropped);
-      setImagePreviewMeta({
-        name: cropped.name,
-        width,
-        height,
-      });
-      const nextUrl = URL.createObjectURL(cropped);
-      setImagePreviewUrl((prevUrl) => {
-        if (prevUrl) URL.revokeObjectURL(prevUrl);
-        return nextUrl;
-      });
-    } catch (error) {
-      lastCroppedImageKeyRef.current = null;
-      throw error;
+  // Create composite image when image files change
+  useEffect(() => {
+    if (imageFiles.length === 0) {
+      setCompositeImageFile(null);
+      clearImagePreview();
+      return;
     }
+
+    const { width, height } = parseSize(resolvedSize);
+    const files = imageFiles.map(({ file }) => file);
+    
+    composeMultipleImages(files, width, height)
+      .then((composite) => {
+        setCompositeImageFile(composite);
+        setImagePreviewMeta({
+          name: composite.name,
+          width,
+          height,
+        });
+        const nextUrl = URL.createObjectURL(composite);
+        setImagePreviewUrl((prevUrl) => {
+          if (prevUrl) URL.revokeObjectURL(prevUrl);
+          return nextUrl;
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to compose images:", error);
+        setCompositeImageFile(null);
+        clearImagePreview();
+      });
+  }, [imageFiles, resolvedSize, clearImagePreview]);
+
+  const handleImageSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target?.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const newImages: ImageFileWithPreview[] = [];
+    
+    for (let i = 0; i < Math.min(files.length, 9); i++) {
+      const file = files[i];
+      const previewUrl = URL.createObjectURL(file);
+      const id = `${file.name}-${file.lastModified}-${Date.now()}-${i}`;
+      
+      newImages.push({
+        file,
+        previewUrl,
+        id,
+      });
+    }
+
+    setImageFiles((prev) => {
+      // Clean up old preview URLs
+      prev.forEach(({ previewUrl }) => {
+        URL.revokeObjectURL(previewUrl);
+      });
+      return newImages;
+    });
+
+    // Reset the file input
+    event.target.value = "";
+  }, []);
+
+  const handleRemoveImage = useCallback((id: string) => {
+    setImageFiles((prev) => {
+      const imageToRemove = prev.find((img) => img.id === id);
+      if (imageToRemove) {
+        URL.revokeObjectURL(imageToRemove.previewUrl);
+      }
+      return prev.filter((img) => img.id !== id);
+    });
   }, []);
 
   const applyImageFile = useCallback(async (file: File | null, currentSize = resolvedSize) => {
     if (!file) {
-      setImageFile(null);
-      setOriginalImageFile(null);
+      setImageFiles([]);
+      setCompositeImageFile(null);
       clearImagePreview();
       return;
     }
-    setOriginalImageFile(file);
-    await applyCroppedImage(file, currentSize);
-  }, [applyCroppedImage, clearImagePreview, resolvedSize]);
-
-  const handleImageSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>, currentSize = resolvedSize) => {
-    const file = event.target?.files?.[0];
-    if (!file) {
-      await applyImageFile(null, currentSize);
-      return;
-    }
-    await applyImageFile(file, currentSize);
-  }, [applyImageFile, resolvedSize]);
+    
+    const previewUrl = URL.createObjectURL(file);
+    const id = `${file.name}-${file.lastModified}-${Date.now()}`;
+    
+    setImageFiles([{
+      file,
+      previewUrl,
+      id,
+    }]);
+  }, [clearImagePreview, resolvedSize]);
 
   const handleGeneratedImageDataUrl = useCallback(async (dataUrl: string, filename = "generated.png", currentSize = resolvedSize) => {
     const file = await dataUrlToFile(dataUrl, filename);
@@ -164,18 +222,14 @@ const useVideoForm = (): UseVideoFormResult => {
     await applyImageFile(file, currentSize);
   }, [applyImageFile, resolvedSize]);
 
-  useEffect(() => {
-    if (!originalImageFile) return;
-    applyCroppedImage(originalImageFile, resolvedSize).catch(() => {
-      /* ignore recrop errors */
-    });
-  }, [originalImageFile, resolvedSize, applyCroppedImage]);
-
   const resetImage = useCallback(() => {
-    setImageFile(null);
-    setOriginalImageFile(null);
+    imageFiles.forEach(({ previewUrl }) => {
+      URL.revokeObjectURL(previewUrl);
+    });
+    setImageFiles([]);
+    setCompositeImageFile(null);
     clearImagePreview();
-  }, [clearImagePreview]);
+  }, [clearImagePreview, imageFiles]);
 
   const clearForm = useCallback(() => {
     setPrompt("");
@@ -207,10 +261,12 @@ const useVideoForm = (): UseVideoFormResult => {
     setVersionsCount,
     remixId,
     setRemixId,
-    imageFile,
+    imageFiles,
+    compositeImageFile,
     imagePreviewUrl,
     imagePreviewMeta,
     handleImageSelect,
+    handleRemoveImage,
     applyImageFile,
     handleGeneratedImageDataUrl,
     handleGeneratedImageUrl,
