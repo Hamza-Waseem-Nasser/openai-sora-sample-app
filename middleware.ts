@@ -15,6 +15,16 @@ const getAllowedOrigins = (): Set<string> => {
     s.add(`https://${process.env.VERCEL_URL}`);
   }
 
+  // If deploying on Netlify, allow the Netlify URL
+  if (process.env.URL) {
+    s.add(process.env.URL);
+  }
+
+  // Also allow deploy preview URLs on Netlify
+  if (process.env.DEPLOY_PRIME_URL) {
+    s.add(process.env.DEPLOY_PRIME_URL);
+  }
+
   return s;
 };
 
