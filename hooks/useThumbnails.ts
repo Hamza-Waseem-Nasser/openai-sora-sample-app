@@ -5,6 +5,7 @@ import {
   useState,
 } from "react";
 import { fetchVideoContent } from "../services/soraApi";
+import { isCompletedStatus } from "../utils/video";
 import type { VideoItem } from "../utils/video";
 
 type UseThumbnailsOptions = {
@@ -63,6 +64,10 @@ const useThumbnails = ({ items }: UseThumbnailsOptions): ThumbnailMap => {
     for (const item of items) {
       const id = item?.id;
       if (!id) continue;
+      
+      // Only fetch thumbnails for completed videos to avoid 404 errors
+      if (!isCompletedStatus(item.status)) continue;
+      
       if (thumbnailsRef.current[id]) continue;
       if (inFlightRef.current[id]) continue;
       inFlightRef.current[id] = fetchThumbnail(id)
