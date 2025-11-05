@@ -44,11 +44,11 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  
-  // Sora API enforces a 500 character limit on prompts
-  if (prompt.length > 500) {
+
+  // Sora API enforces a 4000 character limit on prompts
+  if (prompt.length > 4000) {
     return Response.json(
-      { error: { message: `Prompt exceeds maximum length of 500 characters (current: ${prompt.length})` } },
+      { error: { message: `Prompt exceeds maximum length of 4000 characters (current: ${prompt.length})` } },
       { status: 400 }
     );
   }
